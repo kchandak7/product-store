@@ -52,40 +52,35 @@ export const getProduct = async (req, res) => {
     }
 };
 
+
 export const updateProduct = async (req, res) => {
+
     const { id } = req.params;
 
     const { name, price, image } = req.body;
 
     try {
-        // stores dynamic SET clauses
-        const fields = [];
 
-        // stores actual values
+        const fields = [];
         const values = [];
 
-        // CHECK NAME
+        // dynamic fields
         if (name !== undefined) {
-
-            fields.push("name");
+            fields.push(`name = $${fields.length + 1}`);
             values.push(name);
         }
 
-        // CHECK PRICE
         if (price !== undefined) {
-
-            fields.push("price");
+            fields.push(`price = $${fields.length + 1}`);
             values.push(price);
         }
 
-        // CHECK IMAGE
         if (image !== undefined) {
-
-            fields.push("image");
+            fields.push(`image = $${fields.length + 1}`);
             values.push(image);
         }
 
-        // if user sends nothing
+        // nothing sent
         if (fields.length === 0) {
 
             return res.status(400).json({
@@ -93,45 +88,22 @@ export const updateProduct = async (req, res) => {
             });
         }
 
-        let updatedProduct;
+        // add id as LAST parameter
+        values.push(id);
 
-        // ONLY NAME
-        if (fields.length === 1) {
+        // final query
+        const query = `
+            UPDATE products
+            SET ${fields.join(", ")}
+            WHERE id = $${values.length}
+            RETURNING *
+        `;
 
-            updatedProduct = await sql`
-                UPDATE products
-                SET ${sql(fields[0])} = ${values[0]}
-                WHERE id = ${id}
-                RETURNING *
-            `;
-        }
-
-        // NAME + PRICE
-        else if (fields.length === 2) {
-
-            updatedProduct = await sql`
-                UPDATE products
-                SET
-                    ${sql(fields[0])} = ${values[0]},
-                    ${sql(fields[1])} = ${values[1]}
-                WHERE id = ${id}
-                RETURNING *
-            `;
-        }
-
-        // NAME + PRICE + IMAGE
-        else {
-
-            updatedProduct = await sql`
-                UPDATE products
-                SET
-                    ${sql(fields[0])} = ${values[0]},
-                    ${sql(fields[1])} = ${values[1]},
-                    ${sql(fields[2])} = ${values[2]}
-                WHERE id = ${id}
-                RETURNING *
-            `;
-        }
+        // execute query
+        const updatedProduct = await sql.query(
+            query,
+            values
+        );
 
         // no product found
         if (!updatedProduct.length) {
@@ -163,6 +135,7 @@ export const updateProduct = async (req, res) => {
         });
     }
 };
+
 
 export const deleteProduct = async (req, res) => {    
     const { id } = req.params;

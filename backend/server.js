@@ -6,7 +6,7 @@ import dotenv from 'dotenv';
 
 import productRoutes from './routes/productRoutes.js';
 import { sql } from './config/db.js';
-
+import { aj } from './lib/arcjet.js';
 dotenv.config();
 
 const app = express();
@@ -18,6 +18,40 @@ app.use(cors());
 app.use(helmet());
 // morgan helps log HTTP requests in the console for debugging purposes
 app.use(morgan('dev'));
+
+app.use(async (req, res, next) => {
+
+    try {
+        const decision = await aj.protect(req, {
+            requested: 1
+        });
+
+        if (decision.isDenied()) {
+            if (decision.reason.isRateLimit()) {
+
+                return res.status(429).json({
+                    error: "Too many requests. Please try again later."
+                });
+            }
+            else if (decision.reason.isBot()) {
+
+                return res.status(403).json({
+                    error: "Access denied. Bot traffic is not allowed."
+                });
+            }
+            else {
+
+                return res.status(403).json({
+                    error: "Access denied. Your request was blocked by Arcjet."
+                });
+            }
+        }
+        next();
+    } catch (error) {
+        console.error("Arcjet Error:", error);
+        next();
+    }
+});
 
 app.use("/api/products", productRoutes);
 

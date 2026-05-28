@@ -5,9 +5,9 @@
   "scripts": {
     "dev": "nodemon server.js"
   },
-  "keywords": [], 
+  "keywords": [],
   "author": "",
-  "type":"module",
+  "type": "module",
   "license": "ISC",
   "description": "",
   "dependencies": {
